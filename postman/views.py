@@ -115,6 +115,16 @@ def write(request, recipients=None, form_classes=(WriteForm, AnonymousWriteForm)
         ``auto_moderators``: a list of auto-moderation functions
 
     """
+
+    ## hack to allow use of ajax_select for multiple users:
+    if request.method == 'POST':
+        request.POST._mutable = True
+        post_recipients = request.POST['recipients']
+        post_ids = [int(n) for n in post_recipients.split('|') if n != u'']
+        users = User.objects.filter(id__in=post_ids)
+        request.POST['recipients'] = ','.join([user.username for user in users])
+        request.POST._mutable = False
+
     user = request.user
     form_class = form_classes[0] if user.is_authenticated() else form_classes[1]
     if isinstance(autocomplete_channels, tuple) and len(autocomplete_channels) == 2:
