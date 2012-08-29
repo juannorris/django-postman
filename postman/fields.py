@@ -137,7 +137,7 @@ from django.template.loader import render_to_string
 from django.template.defaultfilters import escapejs
 
 from ajax_select import get_lookup
-from ajax_select import bootstrap
+from ajax_select.fields import bootstrap
 
 from ajax_select.fields import AutoCompleteSelectMultipleField
 #from ajax_select.widgets import AutoCompleteSelectMultipleWidget
