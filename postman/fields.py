@@ -9,6 +9,7 @@ from django.core.validators import EMPTY_VALUES
 from django.forms.fields import CharField
 from django.utils.translation import ugettext_lazy as _
 
+
 class BasicCommaSeparatedUserField(CharField):
     """
     An internal base class for CommaSeparatedUserField.
@@ -121,3 +122,141 @@ if app_name in settings.INSTALLED_APPS and arg_default:
 else:
     autocompleter_app['is_active'] = False
     CommaSeparatedUserField = BasicCommaSeparatedUserField
+
+
+###############################################################################
+
+from django import forms
+from django.core.urlresolvers import reverse
+from django.forms.util import flatatt
+
+#from django.utils import simplejson
+from django.utils.safestring import mark_safe
+
+from django.template.loader import render_to_string
+from django.template.defaultfilters import escapejs
+
+from ajax_select import get_lookup
+from ajax_select import bootstrap
+
+from ajax_select.fields import AutoCompleteSelectMultipleField
+#from ajax_select.widgets import AutoCompleteSelectMultipleWidget
+
+
+class CommaAutoCompleteSelectMultipleWidget(forms.widgets.SelectMultiple):
+
+    """ widget to select multiple models """
+
+    add_link = None
+
+    def __init__(self,
+                 channel,
+                 help_text='',
+                 show_help_text=False,
+                 *args, **kwargs):
+        super(CommaAutoCompleteSelectMultipleWidget,
+              self).__init__(*args, **kwargs)
+        self.channel = channel
+
+        self.help_text = help_text or _('Enter text to search.')
+        self.show_help_text = show_help_text
+
+    def render(self, name, value, attrs=None):
+
+        if value is None:
+            value = []
+
+        final_attrs = self.build_attrs(attrs)
+        self.html_id = final_attrs.pop('id', name)
+
+        lookup = get_lookup(self.channel)
+
+        # eg. value = [3002L, 1194L]
+        if value:
+            # pk,pk, of current
+            current_ids = "," + ",".join(str(pk) for pk in value) + ","
+        else:
+            current_ids = ","
+
+        objects = lookup.get_objects(value)
+
+        # text repr of currently selected items
+        current_repr_json = []
+        for obj in objects:
+            display = lookup.format_item_display(obj)
+            current_repr_json.append(
+                        """new Array("%s",%s)""" % (escapejs(display), obj.pk))
+        current_reprs = mark_safe(
+                                "new Array(%s)" % ",".join(current_repr_json))
+
+        if self.show_help_text:
+            help_text = self.help_text
+        else:
+            help_text = ''
+
+        context = {
+            'name': name,
+            'html_id': self.html_id,
+            'min_length': getattr(lookup, 'min_length', 1),
+            'lookup_url': reverse('ajax_lookup',
+                                  kwargs={'channel': self.channel}),
+            'current': value,
+            'current_ids': current_ids,
+            'current_reprs': current_reprs,
+            'help_text': help_text,
+            'extra_attrs': mark_safe(flatatt(final_attrs)),
+            'func_slug': self.html_id.replace("-", ""),
+            'add_link': self.add_link,
+        }
+        context.update(bootstrap())
+
+        return mark_safe(
+                 render_to_string(
+                     ('autocompleteselectmultiple_%s.html' % self.channel,
+                      'autocompleteselectmultiple.html'), context
+                 )
+               )
+
+    def value_from_datadict(self, data, files, name):
+        # eg. u'members': [u'|229|4688|190|']
+        return [long(val) for val in data.get(name,'').split('|') if val]
+
+    def id_for_label(self, id_):
+        return '%s_text' % id_
+
+
+
+class CommaAutoCompleteSelectMultipleField(AutoCompleteSelectMultipleField):
+    """  asdf """
+
+    def __init__(self, channel, *args, **kwargs):
+        as_default_help = u'Enter text to search.'
+        help_text = kwargs.get('help_text')
+        if not (help_text is None):
+            try:
+                en_help = help_text.translate('en')
+            except AttributeError:
+                pass
+            else:
+                # monkey patch the django default help text to the ajax selects default help text
+                django_default_help = u'Hold down "Control", or "Command" on a Mac, to select more than one.'
+                if django_default_help in en_help:
+                    en_help = en_help.replace(django_default_help,'').strip()
+                    # probably will not show up in translations
+                    if en_help:
+                        help_text = _(en_help)
+                    else:
+                        help_text = _(as_default_help)
+        else:
+            help_text = _(as_default_help)
+
+        # admin will also show help text, so by default do not show it in widget
+        # if using in a normal form then set to True so the widget shows help
+        show_help_text = kwargs.pop('show_help_text',False)
+
+        kwargs['widget'] = CommaAutoCompleteSelectMultipleWidget(
+                                channel=channel, help_text=help_text,
+                                show_help_text=show_help_text)
+
+        super(CommaAutoCompleteSelectMultipleField,
+              self).__init__(*args, **kwargs)
