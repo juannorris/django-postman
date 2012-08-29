@@ -120,9 +120,11 @@ def write(request, recipients=None, form_classes=(WriteForm, AnonymousWriteForm)
     if request.method == 'POST':
         request.POST._mutable = True
         post_recipients = request.POST['recipients']
+        post_recipients = post_recipients.replace(',', '|')
         post_ids = [int(n) for n in post_recipients.split('|') if n != u'']
         users = User.objects.filter(id__in=post_ids)
         request.POST['recipients'] = ','.join([user.username for user in users])
+        #request.POST['recipients'] = ','.join([str(user.id) for user in users])
         request.POST._mutable = False
 
     user = request.user
@@ -137,6 +139,7 @@ def write(request, recipients=None, form_classes=(WriteForm, AnonymousWriteForm)
             user_filter=user_filter,
             exchange_filter=exchange_filter,
             max=max)
+        #import ipdb; ipdb.set_trace()
         if form.is_valid():
             is_successful = form.save(auto_moderators=auto_moderators)
             if is_successful:

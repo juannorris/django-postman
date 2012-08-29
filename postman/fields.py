@@ -7,6 +7,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.validators import EMPTY_VALUES
 from django.forms.fields import CharField
+#from django.forms import ModelMultipleChoiceField
 from django.utils.translation import ugettext_lazy as _
 
 
@@ -63,7 +64,16 @@ class BasicCommaSeparatedUserField(CharField):
 
     def clean(self, value):
         """Check names are valid and filter them."""
+        #import ipdb; ipdb.set_trace()
         names = super(BasicCommaSeparatedUserField, self).clean(value)
+
+        # another hack
+        names = [la.replace("u'", "") for la in names]
+        names = [la.replace("']", "") for la in names]
+        names = [la.replace("[", "") for la in names]
+        names = [la.replace("'", "") for la in names]
+
+        print names
         if not names:
             return []
         users = list(User.objects.filter(is_active=True, username__in=names))
@@ -108,7 +118,7 @@ from django.template.defaultfilters import escapejs
 from ajax_select import get_lookup
 from ajax_select.fields import bootstrap
 
-from ajax_select.fields import AutoCompleteSelectMultipleField
+#from ajax_select.fields import AutoCompleteSelectMultipleField
 #from ajax_select.widgets import AutoCompleteSelectMultipleWidget
 
 
@@ -147,7 +157,13 @@ class CommaAutoCompleteSelectMultipleWidget(forms.widgets.SelectMultiple):
         else:
             current_ids = ","
 
+        # names hack
+        aux_value = value
+        #value = User.objects.get(username__in=value
+                                        #).values_list('id', flat=True)
+        value = [User.objects.get(username=v).id for v in value]
         objects = lookup.get_objects(value)
+        value = aux_value
 
         # text repr of currently selected items
         current_repr_json = []
@@ -189,13 +205,13 @@ class CommaAutoCompleteSelectMultipleWidget(forms.widgets.SelectMultiple):
     def value_from_datadict(self, data, files, name):
         # eg. u'members': [u'229,4688,190']
         #import ipdb; ipdb.set_trace()
-        return [long(val) for val in data.get(name, '').split(',') if val]
+        return [val for val in data.get(name, '').split(',') if val]
 
     def id_for_label(self, id_):
         return '%s_text' % id_
 
 
-class CommaAutoCompleteSelectMultipleField(AutoCompleteSelectMultipleField):
+class CommaAutoCompleteSelectMultipleField(forms.fields.CharField):
     """  asdf """
 
     def __init__(self, channel, *args, **kwargs):
@@ -228,7 +244,7 @@ class CommaAutoCompleteSelectMultipleField(AutoCompleteSelectMultipleField):
                                 show_help_text=show_help_text)
 
         super(CommaAutoCompleteSelectMultipleField,
-              self).__init__(*args, **kwargs)
+              self).__init__(channel, *args, **kwargs)
 
 
 ###############################################################################
@@ -237,6 +253,7 @@ class CommaAutoCompleteSelectMultipleField(AutoCompleteSelectMultipleField):
 d = getattr(settings, 'POSTMAN_AUTOCOMPLETER_APP', {})
 app_name = d.get('name', 'ajax_select')
 field_name = d.get('field', 'AutoCompleteField')
+print field_name
 arg_name = d.get('arg_name', 'channel')
 arg_default = d.get('arg_default') # the minimum to declare to enable the feature
 
@@ -261,8 +278,20 @@ if app_name in settings.INSTALLED_APPS and arg_default:
             if hasattr(self.widget, arg_name):
                 setattr(self.widget, arg_name, value)
 
+    #class CommaSeparatedUserField(ModelMultipleChoiceField, auto_complete_field):
+            #def __init__(self, *args, **kwargs):
+                #if not args and arg_name not in kwargs:
+                    #kwargs.update([(arg_name,arg_default)])
+                #kwargs['queryset'] = User.objects.all()
+                #super(CommaSeparatedUserField, self).__init__(*args, **kwargs)
+    #
+            #def set_arg(self, value):
+                #"""Same as it is done in ajax_select.fields.py for Fields and Widgets."""
+                #if hasattr(self, arg_name):
+                    #setattr(self, arg_name, value)
+                #if hasattr(self.widget, arg_name):
+                    #setattr(self.widget, arg_name, value)
+
 else:
     autocompleter_app['is_active'] = False
     CommaSeparatedUserField = BasicCommaSeparatedUserField
-
-
