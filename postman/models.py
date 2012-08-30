@@ -25,17 +25,18 @@ STATUS_CHOICES = (
     (STATUS_REJECTED, _('Rejected')),
 )
 # ordering constants
-ORDER_BY_KEY = 'o' # as 'order'
+ORDER_BY_KEY = 'o'  # as 'order'
 ORDER_BY_FIELDS = {
     'f': 'sender__username',    # as 'from'
-    't': 'recipient__username', # as 'to'
+    't': 'recipient__username',  # as 'to'
     's': 'subject',  # as 'subject'
     'd': 'sent_at',  # as 'date'
 }
-ORDER_BY_MAPPER = {'sender': 'f', 'recipient': 't', 'subject': 's', 'date': 'd'} # for templatetags usage
+ORDER_BY_MAPPER = {'sender': 'f', 'recipient': 't', 'subject': 's', 'date': 'd'}  # for templatetags usage
 
-dbms = settings.DATABASES['default']['ENGINE'].rsplit('.',1)[-1]
+dbms = settings.DATABASES['default']['ENGINE'].rsplit('.', 1)[-1]
 QUOTE_CHAR = '`' if dbms == 'mysql' else '"'
+
 
 def get_order_by(query_dict):
     """
@@ -45,19 +46,20 @@ def get_order_by(query_dict):
     ``query_dict``: a dictionary to look for a key dedicated to ordering purpose
 
     >>> get_order_by({})
-    
+
     >>> get_order_by({ORDER_BY_KEY: 'f'})
     'sender__username'
     >>> get_order_by({ORDER_BY_KEY: 'D'})
     '-sent_at'
     """
     if ORDER_BY_KEY in query_dict:
-        code = query_dict[ORDER_BY_KEY] # code may be uppercase or lowercase
+        code = query_dict[ORDER_BY_KEY]  # code may be uppercase or lowercase
         order_by_field = ORDER_BY_FIELDS.get(code.lower())
         if order_by_field:
             if code.isupper():
                 order_by_field = '-' + order_by_field
             return order_by_field
+
 
 class MessageManager(models.Manager):
     """The manager for Message."""
@@ -76,7 +78,7 @@ class MessageManager(models.Manager):
             qs = self.all()
         if order_by:
             qs = qs.order_by(order_by)
-        if isinstance(filters, (list,tuple)):
+        if isinstance(filters, (list, tuple)):
             lookups = models.Q()
             for filter in filters:
                 lookups |= models.Q(**filter)
@@ -119,7 +121,7 @@ class MessageManager(models.Manager):
 
         """
         return self.inbox(user, related=False, option=OPTION_MESSAGES).filter(read_at__isnull=True).count()
-    
+
     def sent(self, user, **kwargs):
         """
         Return all messages sent by a user but not marked as archived or deleted.
@@ -137,7 +139,7 @@ class MessageManager(models.Manager):
         """
         Return messages belonging to a user and marked as archived.
         """
-        related = ('sender','recipient')
+        related = ('sender', 'recipient')
         filters = ({
             'recipient': user,
             'recipient_archived': True,
@@ -154,7 +156,7 @@ class MessageManager(models.Manager):
         """
         Return messages belonging to a user and marked as deleted.
         """
-        related = ('sender','recipient')
+        related = ('sender', 'recipient')
         filters = ({
             'recipient': user,
             'recipient_deleted_at__isnull': False,
@@ -169,7 +171,7 @@ class MessageManager(models.Manager):
         """
         Return message/conversation for display.
         """
-        return self.select_related('sender','recipient').filter(
+        return self.select_related('sender', 'recipient').filter(
             filter,
             (models.Q(recipient=user) & models.Q(moderation_status=STATUS_ACCEPTED)) | models.Q(sender=user),
         ).order_by('sent_at')
@@ -184,7 +186,7 @@ class MessageManager(models.Manager):
         """
         Return messages matching a filter AND being visible to a user as the sender.
         """
-        return self.filter(filter, sender=user) # any status is fine
+        return self.filter(filter, sender=user)  # any status is fine
 
     def perms(self, user):
         """
@@ -206,6 +208,7 @@ class MessageManager(models.Manager):
             read_at__isnull=True,
         ).update(read_at=now())
 
+
 class Message(models.Model):
     """
     A message between a User and another User or an AnonymousUser.
@@ -217,7 +220,7 @@ class Message(models.Model):
     body = models.TextField(_("body"), blank=True)
     sender = models.ForeignKey(User, related_name='sent_messages', null=True, blank=True, verbose_name=_("sender"))
     recipient = models.ForeignKey(User, related_name='received_messages', null=True, blank=True, verbose_name=_("recipient"))
-    email = models.EmailField(_("visitor"), blank=True) # instead of either sender or recipient, for an AnonymousUser
+    email = models.EmailField(_("visitor"), blank=True)  # instead of either sender or recipient, for an AnonymousUser
     parent = models.ForeignKey('self', related_name='next_messages', null=True, blank=True, verbose_name=_("parent message"))
     thread = models.ForeignKey('self', related_name='child_messages', null=True, blank=True, verbose_name=_("root message"))
     sent_at = models.DateTimeField(_("sent at"), default=now)
@@ -242,7 +245,7 @@ class Message(models.Model):
         ordering = ['-sent_at', '-id']
 
     def __unicode__(self):
-        return u"{0}>{1}:{2}".format(self.obfuscated_sender, self.obfuscated_recipient, truncate_words(self.subject,5))
+        return u"{0}>{1}:{2}".format(self.obfuscated_sender, self.obfuscated_recipient, truncate_words(self.subject, 5))
 
     @models.permalink
     def get_absolute_url(self):
@@ -251,9 +254,11 @@ class Message(models.Model):
     def is_pending(self):
         """Tell if the message is in the pending state."""
         return self.moderation_status == STATUS_PENDING
+
     def is_rejected(self):
         """Tell if the message is in the rejected state."""
         return self.moderation_status == STATUS_REJECTED
+
     def is_accepted(self):
         """Tell if the message is in the accepted state."""
         return self.moderation_status == STATUS_ACCEPTED
@@ -280,12 +285,12 @@ class Message(models.Model):
         """
         email = self.email
         digest = hashlib.md5(email + settings.SECRET_KEY).hexdigest()
-        shrunken_digest = '..'.join((digest[:4], digest[-4:])) # 32 characters is too long and is useless
+        shrunken_digest = '..'.join((digest[:4], digest[-4:]))  # 32 characters is too long and is useless
         bits = email.split('@')
-        if len(bits) <> 2:
+        if len(bits) != 2:
             return u''
         domain = bits[1]
-        return '@'.join((shrunken_digest, domain.rsplit('.',1)[0])) # leave off the TLD to gain some space
+        return '@'.join((shrunken_digest, domain.rsplit('.', 1)[0])) # leave off the TLD to gain some space
 
     def admin_sender(self):
         """
@@ -353,7 +358,7 @@ class Message(models.Model):
 
     def clean_moderation(self, initial_status, user=None):
         """Adjust automatically some fields, according to status workflow."""
-        if self.moderation_status <> initial_status:
+        if self.moderation_status != initial_status:
             self.moderation_date = now()
             self.moderation_by = user
             if self.is_rejected():
@@ -385,7 +390,7 @@ class Message(models.Model):
 
     def update_parent(self, initial_status):
         """Update the parent to actualize its response state."""
-        if self.moderation_status <> initial_status:
+        if self.moderation_status != initial_status:
             parent = self.parent
             if self.is_accepted():
                 # keep the very first date; no need to do differently
@@ -447,15 +452,19 @@ class Message(models.Model):
             moderators = (moderators,)
         for moderator in moderators:
             rating = moderator(self)
-            if rating is None: continue
+            if rating is None:
+                continue
             if isinstance(rating, tuple):
                 percent, reason = rating
             else:
                 percent = rating
                 reason = getattr(moderator, 'default_reason', '')
-            if percent is False: percent = 0
-            if percent is True: percent = 100
-            if not 0 <= percent <= 100: continue
+            if percent is False:
+                percent = 0
+            if percent is True:
+                percent = 100
+            if not 0 <= percent <= 100:
+                continue
             if percent == 0:
                 auto = False
                 final_reason = reason
@@ -467,7 +476,7 @@ class Message(models.Model):
             reasons.append(reason)
         if auto is None and percents:
             average = float(sum(percents)) / len(percents)
-            final_reason = ', '.join([r for i,r in enumerate(reasons) if r and not r.isspace() and percents[i] < 50])
+            final_reason = ', '.join([r for i, r in enumerate(reasons) if r and not r.isspace() and percents[i] < 50])
             auto = average >= 50
         if auto is None:
             auto = getattr(settings, 'POSTMAN_AUTO_MODERATE_AS', None)
@@ -477,12 +486,14 @@ class Message(models.Model):
             self.moderation_status = STATUS_REJECTED
             self.moderation_reason = final_reason
 
+
 class PendingMessageManager(models.Manager):
     """The manager for PendingMessage."""
 
     def get_query_set(self):
         """Filter to get only pending objects."""
         return super(PendingMessageManager, self).get_query_set().filter(moderation_status=STATUS_PENDING)
+
 
 class PendingMessage(Message):
     """
