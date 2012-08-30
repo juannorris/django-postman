@@ -6,7 +6,7 @@ this one in your root URLconf to set up the default URLs::
 
 Otherwise you may customize the behavior by passing extra parameters.
 
-Recipients Max 
+Recipients Max
 --------------
 Views supporting the parameter are: ``write``, ``reply``.
 Example::
@@ -87,9 +87,9 @@ Refer to documentation.
 
 """
 try:
-    from django.conf.urls import patterns, include, url # django 1.4
+    from django.conf.urls import patterns, include, url  # django 1.4
 except ImportError:
-    from django.conf.urls.defaults import patterns, include, url # django 1.3
+    from django.conf.urls.defaults import patterns, include, url  # django 1.3
 from django.views.generic.simple import redirect_to
 
 OPTION_MESSAGES = 'm'
@@ -104,6 +104,8 @@ urlpatterns = patterns('postman.views',
     url(r'^reply/(?P<message_id>[\d]+)/$', 'reply', name='postman_reply'),
     url(r'^view/(?P<message_id>[\d]+)/$', 'view', name='postman_view'),
     url(r'^view/t/(?P<thread_id>[\d]+)/$', 'view_conversation', name='postman_view_conversation'),
+    url(r'^markasunread/$', 'mark_as_unread', name='postman_markasunread'),
+    url(r'^markasread/$', 'mark_as_read', name='postman_markasread'),
     url(r'^archive/$', 'archive', name='postman_archive'),
     url(r'^delete/$', 'delete', name='postman_delete'),
     url(r'^undelete/$', 'undelete', name='postman_undelete'),

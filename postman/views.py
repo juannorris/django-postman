@@ -22,6 +22,7 @@ from postman.models import Message, get_order_by
 from postman.urls import OPTION_MESSAGES
 from postman.utils import format_subject, format_body
 
+
 ##########
 # Helpers
 ##########
@@ -29,7 +30,8 @@ def _get_referer(request):
     """Return the HTTP_REFERER, if existing."""
     if 'HTTP_REFERER' in request.META:
         sr = urlparse.urlsplit(request.META['HTTP_REFERER'])
-        return urlparse.urlunsplit(('','',sr.path,sr.query,sr.fragment))
+        return urlparse.urlunsplit(('', '', sr.path, sr.query, sr.fragment))
+
 
 ########
 # Views
@@ -50,8 +52,9 @@ def _folder(request, folder_name, view_name, option, template_name):
         'by_conversation_url': reverse(view_name),
         'by_message_url': reverse(view_name, args=[OPTION_MESSAGES]),
         'current_url': request.get_full_path(),
-        'gets': request.GET, # useful to postman_order_by template tag
+        'gets': request.GET,  # useful to postman_order_by template tag
         }, context_instance=RequestContext(request))
+
 
 @login_required
 def inbox(request, option=None, template_name='postman/inbox.html'):
@@ -67,6 +70,7 @@ def inbox(request, option=None, template_name='postman/inbox.html'):
     """
     return _folder(request, 'inbox', 'postman_inbox', option, template_name)
 
+
 @login_required
 def sent(request, option=None, template_name='postman/sent.html'):
     """
@@ -76,6 +80,7 @@ def sent(request, option=None, template_name='postman/sent.html'):
 
     """
     return _folder(request, 'sent', 'postman_sent', option, template_name)
+
 
 @login_required
 def archives(request, option=None, template_name='postman/archives.html'):
@@ -87,6 +92,7 @@ def archives(request, option=None, template_name='postman/archives.html'):
     """
     return _folder(request, 'archives', 'postman_archives', option, template_name)
 
+
 @login_required
 def trash(request, option=None, template_name='postman/trash.html'):
     """
@@ -97,9 +103,11 @@ def trash(request, option=None, template_name='postman/trash.html'):
     """
     return _folder(request, 'trash', 'postman_trash', option, template_name)
 
-def write(request, recipients=None, form_classes=(WriteForm, AnonymousWriteForm), autocomplete_channels=None,
-        template_name='postman/write.html', success_url=None,
-        user_filter=None, exchange_filter=None, max=None, auto_moderators=[]):
+
+def write(request, recipients=None, form_classes=(WriteForm, AnonymousWriteForm),
+          autocomplete_channels=None, template_name='postman/write.html',
+          success_url=None, user_filter=None, exchange_filter=None,
+          max=None, auto_moderators=[]):
     """
     Display a form to compose a message.
 
@@ -136,9 +144,8 @@ def write(request, recipients=None, form_classes=(WriteForm, AnonymousWriteForm)
     next_url = _get_referer(request)
     if request.method == 'POST':
         form = form_class(request.POST, sender=user, channel=channel,
-            user_filter=user_filter,
-            exchange_filter=exchange_filter,
-            max=max)
+                          user_filter=user_filter, exchange_filter=exchange_filter,
+                          max=max)
         #import ipdb; ipdb.set_trace()
         if form.is_valid():
             is_successful = form.save(auto_moderators=auto_moderators)
@@ -148,7 +155,7 @@ def write(request, recipients=None, form_classes=(WriteForm, AnonymousWriteForm)
                 messages.warning(request, _("Message rejected for at least one recipient."), fail_silently=True)
             return redirect(request.GET.get('next', success_url or next_url or 'postman_inbox'))
     else:
-        initial = dict(request.GET.items()) # allow optional initializations by query string
+        initial = dict(request.GET.items())  # allow optional initializations by query string
         if recipients:
             # order_by() is not mandatory, but: a) it doesn't hurt; b) it eases the test suite
             # and anyway the original ordering cannot be respected.
@@ -167,10 +174,12 @@ def write(request, recipients=None, form_classes=(WriteForm, AnonymousWriteForm)
 if getattr(settings, 'POSTMAN_DISALLOW_ANONYMOUS', False):
     write = login_required(write)
 
+
 @login_required
-def reply(request, message_id, form_class=FullReplyForm, formatters=(format_subject,format_body), autocomplete_channel=None,
-        template_name='postman/reply.html', success_url=None,
-        user_filter=None, exchange_filter=None, max=None, auto_moderators=[]):
+def reply(request, message_id, form_class=FullReplyForm,
+          formatters=(format_subject, format_body), autocomplete_channel=None,
+          template_name='postman/reply.html', success_url=None, user_filter=None,
+          exchange_filter=None, max=None, auto_moderators=[]):
     """
     Display a form to compose a reply.
 
@@ -193,13 +202,11 @@ def reply(request, message_id, form_class=FullReplyForm, formatters=(format_subj
     next_url = _get_referer(request)
     if request.method == 'POST':
         post = request.POST.copy()
-        if 'subject' not in post: # case of the quick reply form
+        if 'subject' not in post:  # case of the quick reply form
             post['subject'] = initial['subject']
         form = form_class(post, sender=user, recipient=parent.sender or parent.email,
-            channel=autocomplete_channel,
-            user_filter=user_filter,
-            exchange_filter=exchange_filter,
-            max=max)
+                          channel=autocomplete_channel, user_filter=user_filter,
+                          exchange_filter=exchange_filter, max=max)
         if form.is_valid():
             is_successful = form.save(parent=parent, auto_moderators=auto_moderators)
             if is_successful:
@@ -250,20 +257,23 @@ def _view(request, filter, form_class=QuickReplyForm, formatters=(format_subject
             'pm_messages': msgs,
             'archived': archived,
             'reply_to_pk': received.pk if received else None,
-            'form' : form_class(initial=received.quote(*formatters)) if received else None,
+            'form': form_class(initial=received.quote(*formatters)) if received else None,
             'next_url': request.GET.get('next', reverse('postman_inbox')),
             }, context_instance=RequestContext(request))
     raise Http404
+
 
 @login_required
 def view(request, message_id, *args, **kwargs):
     """Display one specific message."""
     return _view(request, Q(pk=message_id), *args, **kwargs)
 
+
 @login_required
 def view_conversation(request, thread_id, *args, **kwargs):
     """Display a conversation."""
     return _view(request, Q(thread=thread_id), *args, **kwargs)
+
 
 def _update(request, field_bit, success_msg, field_value=None, success_url=None):
     """
@@ -288,24 +298,39 @@ def _update(request, field_bit, success_msg, field_value=None, success_url=None)
         recipient_rows = Message.objects.as_recipient(user, filter).update(**{'recipient_{0}'.format(field_bit): field_value})
         sender_rows = Message.objects.as_sender(user, filter).update(**{'sender_{0}'.format(field_bit): field_value})
         if not (recipient_rows or sender_rows):
-            raise Http404 # abnormal enough, like forged ids
+            raise Http404  # abnormal enough, like forged ids
         messages.success(request, success_msg, fail_silently=True)
         return redirect(request.GET.get('next', success_url or next_url))
     else:
         messages.warning(request, _("Select at least one object."), fail_silently=True)
         return redirect(next_url)
 
+
 @login_required
 def archive(request, *args, **kwargs):
     """Mark messages/conversations as archived."""
     return _update(request, 'archived', _("Messages or conversations successfully archived."), True, *args, **kwargs)
+
 
 @login_required
 def delete(request, *args, **kwargs):
     """Mark messages/conversations as deleted."""
     return _update(request, 'deleted_at', _("Messages or conversations successfully deleted."), now(), *args, **kwargs)
 
+
 @login_required
 def undelete(request, *args, **kwargs):
     """Revert messages/conversations from marked as deleted."""
     return _update(request, 'deleted_at', _("Messages or conversations successfully recovered."), *args, **kwargs)
+
+
+@login_required
+def mark_as_read(request, *args, **kwargs):
+    """Mark messages/conversations as readed."""
+    return _update(request, 'read_at', _("Messages or conversations successfully marked as read."), now(), *args, **kwargs)
+
+
+@login_required
+def mark_as_unread(request, *args, **kwargs):
+    """Mark messages/conversations as unreaded."""
+    return _update(request, 'read_at', _("Messages or conversations successfully marked as read."), None, *args, **kwargs)
