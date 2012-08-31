@@ -324,13 +324,33 @@ def undelete(request, *args, **kwargs):
     return _update(request, 'deleted_at', _("Messages or conversations successfully recovered."), *args, **kwargs)
 
 
+def _mark_as(request, read=True, *args, **kwargs):
+    if not request.method == 'POST':
+        raise Http404
+    next_url = _get_referer(request) or 'postman_inbox'
+    pks = request.POST.getlist('pks')
+    tpks = request.POST.getlist('tpks')
+    if pks or tpks:
+        user = request.user
+        filter = Q(pk__in=pks) | Q(thread__in=tpks)
+        mgs_to_change = Message.objects.as_recipient(user, filter)
+        if read:
+            mgs_to_change.update(read_at=now())
+        else:
+            mgs_to_change.update(read_at=None)
+        return redirect(request.GET.get('next', next_url))
+    else:
+        messages.error(request, u("Couldn't mark messages as unread. Sorry."))
+        return redirect(request.GET.get('next'))
+
+
 @login_required
 def mark_as_read(request, *args, **kwargs):
     """Mark messages/conversations as readed."""
-    return _update(request, 'read_at', _("Messages or conversations successfully marked as read."), now(), *args, **kwargs)
+    return _mark_as(request, True, *args, **kwargs)
 
 
 @login_required
 def mark_as_unread(request, *args, **kwargs):
     """Mark messages/conversations as unreaded."""
-    return _update(request, 'read_at', _("Messages or conversations successfully marked as read."), None, *args, **kwargs)
+    return _mark_as(request, False, *args, **kwargs)
