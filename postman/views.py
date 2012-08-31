@@ -129,10 +129,19 @@ def write(request, recipients=None, form_classes=(WriteForm, AnonymousWriteForm)
         request.POST._mutable = True
         post_recipients = request.POST['recipients']
         post_recipients = post_recipients.replace(',', '|')
-        post_ids = [int(n) for n in post_recipients.split('|') if n != u'']
-        users = User.objects.filter(id__in=post_ids)
-        request.POST['recipients'] = ','.join([user.username for user in users])
-        #request.POST['recipients'] = ','.join([str(user.id) for user in users])
+
+        # why this try?
+        # this try/except handles the case when a user submits the form with some
+        # error (missing subject, for instance) and then, after being told about
+        # the error she/he corrects it and resubmits. In this case, the post
+        # recipients where already been fixed and the hack is not necessary.
+        try:
+            post_ids = [int(n) for n in post_recipients.split('|') if n != u'']
+            users = User.objects.filter(id__in=post_ids)
+            request.POST['recipients'] = ','.join([user.username for user in users])
+            #request.POST['recipients'] = ','.join([str(user.id) for user in users])
+        except:
+            pass
         request.POST._mutable = False
 
     user = request.user
