@@ -73,7 +73,7 @@ class BasicCommaSeparatedUserField(CharField):
         names = [la.replace("[", "") for la in names]
         names = [la.replace("'", "") for la in names]
 
-        print names
+        #print names
         if not names:
             return []
         users = list(User.objects.filter(is_active=True, username__in=names))
@@ -253,7 +253,7 @@ class CommaAutoCompleteSelectMultipleField(forms.fields.CharField):
 d = getattr(settings, 'POSTMAN_AUTOCOMPLETER_APP', {})
 app_name = d.get('name', 'ajax_select')
 field_name = d.get('field', 'AutoCompleteField')
-print field_name
+#print field_name
 arg_name = d.get('arg_name', 'channel')
 arg_default = d.get('arg_default') # the minimum to declare to enable the feature
 
