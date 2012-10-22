@@ -157,13 +157,22 @@ class CommaAutoCompleteSelectMultipleWidget(forms.widgets.SelectMultiple):
         else:
             current_ids = ","
 
+        #######################################################################
         # names hack
         aux_value = value
         #value = User.objects.get(username__in=value
                                         #).values_list('id', flat=True)
+
+        ## hack inside the hack: if there's only one recipient, here arrive
+        ## the string with the username instead of a list of usernames with
+        ## just this name. Hence, I make this a one-element list:
+        if isinstance(value, unicode):
+            value = [value, ]
+
         value = [User.objects.get(username=v).id for v in value]
         objects = lookup.get_objects(value)
         value = aux_value
+        #######################################################################
 
         # text repr of currently selected items
         current_repr_json = []
