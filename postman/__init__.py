@@ -1,10 +1,11 @@
 """A messaging application for Django"""
 
 # following PEP 386: N.N[.N]+[{a|b|c|rc}N[.N]+][.postN][.devN]
-VERSION = (2, 0, 2)
+VERSION = (2, 0, 3)
 PREREL = ()
 POST = 0
 DEV = 0
+
 
 def get_version():
     version = '.'.join(map(str, VERSION))
