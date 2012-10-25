@@ -143,10 +143,8 @@ def write(request, recipients=None, form_classes=(WriteForm, AnonymousWriteForm)
             try:
                 # handle the case when something like u'|u|s|e|r|1|0|' comes in
                 # request.POST['recipients']
-                aux = post_recipients.replace('|', '')
-                users = [User.objects.get(username=aux),]
-
-                request.POST['recipients'] = ','.join([user.username for user in users])
+                request.POST['recipients'] = post_recipients.replace('|', '')
+                #request.POST['recipients'] = User.objects.get(username=aux).username
             except:
                 pass
 
@@ -349,15 +347,15 @@ def _mark_as(request, read=True, *args, **kwargs):
     tpks = request.POST.getlist('tpks')
     if pks or tpks:
         user = request.user
-        filter = Q(pk__in=pks) | Q(thread__in=tpks)
-        mgs_to_change = Message.objects.as_recipient(user, filter)
+        filter_ = Q(pk__in=pks) | Q(thread__in=tpks)
+        mgs_to_change = Message.objects.as_recipient(user, filter_)
         if read:
             mgs_to_change.update(read_at=now())
         else:
             mgs_to_change.update(read_at=None)
         return redirect(request.GET.get('next', next_url))
     else:
-        messages.error(request, u("Couldn't mark messages as unread. Sorry."))
+        messages.error(request, (u"Couldn't mark messages as unread. Sorry."))
         return redirect(request.GET.get('next'))
 
 
