@@ -138,13 +138,18 @@ def write(request, recipients=None, form_classes=(WriteForm, AnonymousWriteForm)
         try:
             post_ids = [int(n) for n in post_recipients.split('|') if n != u'']
             users = User.objects.filter(id__in=post_ids)
+            request.POST['recipients'] = ','.join([user.username for user in users])
         except:
-            # handle the case when something like u'|u|s|e|r|1|0|' comes in
-            # request.POST['recipients']
-            aux = post_recipients.replace('|', '')
-            users = [User.objects.get(username=aux),]
+            try:
+                # handle the case when something like u'|u|s|e|r|1|0|' comes in
+                # request.POST['recipients']
+                aux = post_recipients.replace('|', '')
+                users = [User.objects.get(username=aux),]
 
-        request.POST['recipients'] = ','.join([user.username for user in users])
+                request.POST['recipients'] = ','.join([user.username for user in users])
+            except:
+                pass
+
         request.POST._mutable = False
 
     user = request.user
