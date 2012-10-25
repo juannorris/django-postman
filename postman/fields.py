@@ -169,6 +169,7 @@ class CommaAutoCompleteSelectMultipleWidget(forms.widgets.SelectMultiple):
         if isinstance(value, unicode):
             value = [value, ]
 
+        import ipdb; ipdb.set_trace()
         value = [User.objects.get(username=v).id for v in value]
         objects = lookup.get_objects(value)
         value = aux_value
